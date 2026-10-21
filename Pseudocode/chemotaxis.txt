@@ -1,1 +1,21 @@
-#add pseudocode for chemotaxis
+Chemotaxis pseudocode:
+Before the first move
+1. ASSUMPTION: Give the new cell a random “previous direction”, picked from the 8 possible directions
+Each time the cell moves (neutrophils twice per tick, macrophages once)
+2. Note location: c_i = pro-inflammatory concentration at the cell’s current grid square.
+3. Look at 8 neighbouring squares (Moore Neighborhood): Read the concentration in each one (right, up-right, up, up-left, left, down-left, down, down-right). If a neighbour is off the edge of the grid, wrap around to the opposite side, since the boundaries are periodic.
+4. Score each neighbour by gradient using equation (p_j^grad = exp(k_grad · (c_j − c_i)) / Σ_k exp(k_grad · (c_k − c_i))):
+
+5. Score each neighbour by persistence:
+Work out how far each neighbour’s direction is from the direction of the cell’s last move. Measure this as the shortest way around the circle, so “right” and “down-right” count as close.
+6. Turn that angle into a score using a bell curve of width σ_mem. Small angles score high, large angles score low.
+7. Divide by the total of all 8, so the persistence scores add up to 1.
+8. Combine the two. For each neighbour, multiply its gradient score by its persistence score. Then divide by the total again so the 8 final probabilities add up to 1. A neighbour needs a decent score on both to be likely: uphill but behind you, or straight ahead but downhill, both end up with low probability.
+9. Pick a neighbour by chance. Draw a random number between 0 and 1 and use the 8 probabilities to decide which square wins (incorporating weighted probabilities) 
+10. Move. Put the cell in the chosen square.
+11. Remember the direction. Store the direction of this move as the cell’s new “previous direction”, so it influences the next move through step 5.
+
+Special cases
+If all 8 neighbours have the same concentration, step 4 gives equal scores and only persistence shapes the move.
+A macrophage first checks for a nearby apoptotic neutrophil and heads for it. It only uses the steps above when there isn’t one.
+Question: Can 2 cells occupy the same square? 
