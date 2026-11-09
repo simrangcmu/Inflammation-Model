@@ -25,7 +25,6 @@ class Macrophage:
     macrophage_counter = 0  #initialize total count of macrophages to 0 
  
     def __init__(self, grid, params):
-        # Java passed in a ContinuousSpace too, and kept it in sync with grid on every move. Here the grid is the single source of truth.
         self.grid = grid
         self.params = params  
         self.lifespan = np.random.Generator(1440, 86400)   # initializes lifespan; using numpy because of recommendation of better reproducibility than random.randint 
