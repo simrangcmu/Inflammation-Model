@@ -40,52 +40,6 @@ class Neutrophil:
         else: #if lifepsan = 0, the neutrophil turns into apoptotic cell
             self.become_apoptotic()
 
- 
-
-    #move chemotactically, taking into acount gradient and directional persistence
-    def move_chemotactically(self):
-
-        x, y = self.grid.get_location(self)
-        here = self.grid.environment_at(x, y)
-        neighbour_pts = self.grid.moore_neighbour_points(x, y)  # index == move number
-        neighbours = [self.grid.environment_at(*pt) for pt in neighbour_pts]
- 
-        # 1) Gradient term: weight = exp(k * (neighbour_conc - here_conc))
-        k = self.params["m_k_grad"]
-        w_grad = [math.exp(k * (n.pro_concentration - here.pro_concentration)) for n in neighbours]
-        w_total = sum(w_grad)
-        if w_total < 1e-6:
-            p_grad = [0.125] * 8
-        else:
-            p_grad = [w / w_total for w in w_grad]
- 
-        # 2) Memory term: Gaussian centred on "keep going the same way".
-        # shift = how many 45-degree steps this move is from the previous one.
-        shift_to_angle = [0, -math.pi / 4, -math.pi / 2, -3 * math.pi / 4,
-                          math.pi, 3 * math.pi / 4, math.pi / 2, math.pi / 4]
-        sigma2 = self.params["m_sigma"] ** 2
-        p_mem = []
-        for move in range(8):
-            shift = (self.prev_move - move) % 8      # Python % is never negative
-            angle = shift_to_angle[shift]
-            p_mem.append(math.exp(-angle ** 2 / (2 * sigma2))
-                         / math.sqrt(2 * math.pi * sigma2))
-        s = sum(p_mem)
-        new_list = []
-        for p in p_mem:
-            new_list.append(p / s)
-        p_mem = new_list
- 
-        # 3) Combine, then pick a move at random using those weights
-        # random.choices normalises weights itself, so no manual re-normalising needed
-        p_tot = []
-        for i in range(8):
-            p_tot.append(p_mem[i] * p_grad[i])
-        move = random.choices(range(8), weights=p_tot)[0]
- 
-        self.prev_move = move
-        self.grid.move_to(self, *neighbour_pts[move])
- 
     #Release pro-inflam mediator
     def release_pro(self):
             #get current location
