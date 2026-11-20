@@ -67,4 +67,50 @@ class Neutrophil:
         #remove the original neutrophil 
         self.die()                                  
 
+   #Translate above functions into code structure below
+
+    def get_neighbors():
+        """Retrieve 8 neighboring coordinates"""
+
+    def calculate_gradient_probabilities():
+        """Calculate movement based on local differences in c"""
+
+    def calculate_memory_probabilities():
+        """Calculate directional preference based on previous movement direction, 
+        using a Gaussian distribution
+        """
+    def calculate_movement_probability():
+        """ Combine gradient and movement-persistence
+        probabilities and normalize result"""
+
+    def move (grid, environment):
+        """Select movement direction using the calculated
+        probabilities and update position
+        """
+
+    def release_mediatiors(environment):
+        """ Probabilistically release pro-inflammatory 
+        mediator c at current position
+        """
+
+    def update_lifespan():
+        """ Increment age or decrement remaining lifespan"""
+
+    def check_apoptosis():
+        """Determine whether neutrophil has reached
+        the end of its lifespan
+        """
+
+    def become_apoptotic():
+        """Replace active neutrophil with apoptotic neutrophil
+        at same grid space/cell
+        """
+
+    def update():
+        """ Coordinate one active neutrophil's behavior
+        with an apoptotic neutrophil at same position
+        """
+    
+
+    
 
