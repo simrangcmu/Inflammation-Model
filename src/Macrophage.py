@@ -123,5 +123,45 @@ class Macrophage:
                 self.die()
  
 
+#Translate above code into structure below
 
-  
+    def find_apoptotic_neighbors():
+        """Identify apoptotic cells in surrounding Moore neighborhood"""
+
+    def calculate_movement_probabilities():
+        """Determine movement probabilites based on apoptotic-cell attraction 
+         or inflammatory conditions
+         """
+
+    def move():
+        """Move toward nearby apoptotic cells, otherwise towards
+        higher c, otherwise randomly"""
+
+    def find_apoptotic_at_cuurent_location():
+        """Identity apoptotic cells occupying the macrophages current coordinates"""
+
+    def phagocytose():
+        """Attempt to engulf an apoptotic cell with probability (p_ma);
+        remove if it was successful"""
+
+    def activate():
+        """Change the macrophage activation state after its first successful phagocytosis"""
+
+    def release_mediator():
+        """If activated, probabilistically release anti-inflammatory mediator g"""
+
+    def check_departure():
+        """Check local c against departure threshold and determines whether the macrophage 
+        leaves probabilistically"""
+
+    def update_lifespan():
+        """Update macrophage age"""
+
+    def check_death():
+        """Determine whether macrophafe has reached end of lifespan"""
+
+    def update():
+        """Coordinates movement, phagocytosis, activation, mediator release, aging,
+        and possible departure"""
+
+      
