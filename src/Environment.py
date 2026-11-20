@@ -100,4 +100,60 @@ if __name__ == "__main__":
 
     plot_environment(c, g)
 
+#For ease of running the program, we will translate the above code into the function organization below
+""" 
+Represents inflammatory enviroment and simulate concentrations of pro and anti-inflammatory mediators
+"""
+
+def initialize_fields():
+    """Set initial values of c and g
+    """
+
+def initialize_damage_region():
+    """ Set circular central region to initial pro-inflammatory concentrations
+
+    """
+
+def get_pro_inflammatory():
+    """Return local concentration of c 
+    
+    """
+
+def get_anti_inflammatory():
+    """ Return local concentration of g 
+    
+    """
+
+def get_concentrations():
+    """ Returns both mediator concentration at given position
+    
+    """
+
+def add_pro_inflammatory():
+    """Add amount of c at position
+    
+    """
+
+def add_anti_inflammatory():
+    """Add amount of g at position"""
+
+def calculate_laplacian():
+    """ Calculate 5-point finite Laplacian across field, using periodic boundaries
+    
+    """
+
+def update_pro_inflammatory():
+    """Calculate diffusion, decay, and production effects on c
+    """
+
+def update_anti_inflammatory():
+    """Calculate diffusion, decay, and production effects on g"""
+
+def update_fields():
+    """Advance both mediator fields by one numerical PDE timestep"""
+
+def get_neighborhood_concentration():
+    """ Return mediator concentration in neighboring positions, if needed by agent movememt"""
+
+
 
