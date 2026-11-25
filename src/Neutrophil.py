@@ -3,6 +3,10 @@ Python translation of the Repast Simphony Neutrophil agent
 (Bayani, Dunster, Crofts, Nelson - inflammatory response model).
  
 """
+
+#WE DONT NEED THIS IF WE USE THE OTHER ONE
+
+
 import math
 import random
 import numpy as np

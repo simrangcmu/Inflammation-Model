@@ -1,5 +1,7 @@
 import numpy as np
 
+#WE DONT NEED THIS ONCE WE IMPLEMENT CHEMOTAXIS DIRECTLY INTO THE CELLS
+
 def get_neighbors(position, grid_shape):
     """
     Return the eight neighboring locations surrounding a cell

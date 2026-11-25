@@ -101,6 +101,7 @@ class Macrophage:
                 target.die()
                 self.release_anti_on = True
 
+
     #Release of anti-inflammatory mediators
     def release_anti(self):
         if self.release_anti_on:

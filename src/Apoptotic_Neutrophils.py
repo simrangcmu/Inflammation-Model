@@ -4,13 +4,19 @@
 #- never switches to anti-inflammatory state and the signal becomes too weak so keeps running
 
 class ApoptoticNeutrophil: 
+    # track the total number of apoptotic neutrophils
+    apoptotic_counter = 0
+
     def __init__(self, x, y):
+        
         #initial state of the apoptotic neutrophil
         self.x = x
         self.y = y
         self.state = "apoptotic"
         self.engulfed_by_macrophage = False
         self.threshold_reached = False
+        # increment the total apoptotic neutrophil count
+        ApoptoticNeutrophil.apoptotic_counter += 1
 
 
     #methods
@@ -18,18 +24,23 @@ class ApoptoticNeutrophil:
         #check to see if available to engulf by a macrophage
         pass
 
-    def get_engulfed(self):
-        #code to mark the apoptotic neutrophil as engulfed by a macrophage
-        self.engulfed_by_macrophage = True
-        pass
+    def is_apoptotic(self):
+        """
+        check whether the neutrophil is apoptotic.
+        """
+        return self.state == "apoptotic"
 
     def is_engulfed(self):
-        #code to check if the apoptotic neutrophil has been engulfed by a macrophage
-        pass
+        """
+        check whether a macrophage has engulfed the neutrophil.
+        """
+        return self.engulfed_by_macrophage
 
-    def is_apoptotic(self):
-        #code to check if the neutrophil is apoptotic
-        pass
+    def get_engulfed(self):
+        """
+        mark the neutrophil as engulfed.
+        """
+        self.engulfed_by_macrophage = True
 
     def update_state(self): 
         #code to update the state of the apoptotic neutrophil based on whether it has been engulfed by a macrophage
