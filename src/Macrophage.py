@@ -12,22 +12,12 @@ Python translation of the Repast Simphony Macrophage agent
 import math
 import random
 import numpy as np
-from collections import defaultdict
 
 from apoptotic_neutrophils import ApoptoticNeutrophil
 from environment import add_anti_inflammatory
  
 # The 8 Moore-neighbourhood moves: 0=right, 1=up/right, 2=up, 3=up/left, 4=left, 5=down/left, 6=down, 7=down/right
 
-Directions = [(0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1), (1, 0), (1, 1)]
- 
-params = {
-    "movesPerTick_n": 2,
-    "n_k_grad": 0.5,
-    "n_sigma": 1.0,
-    "prob_neutroReleasePro": 0.5,
-    "inc_neutroReleasePro": 0.1,
-}
 
 macrophage_params = {
     "movesPerTick_m": 2,
@@ -40,8 +30,9 @@ macrophage_params = {
 
     "m_k_grad": 0.5,
 
-    "thresh_macroLeave": 0.5,
-    "prob_macroLeave": 0.8
+    "prob_macroLeave": 0.0,
+
+    "macroRecruitmentRadius": 10,
 }
 
 class Macrophage:
@@ -58,9 +49,6 @@ class Macrophage:
         # initialize macrophage lifespan
         self.lifespan = np.random.randint(1440, 86401)
 
-        # initialize previous movement direction
-        self.prev_move = random.randint(0, 7)
-
         # macrophages start in an inactive state
         self.activated = False
 
@@ -73,38 +61,53 @@ class Macrophage:
         # increment the macrophage count
         Macrophage.macrophage_counter += 1
 
-    def find_apoptotic_neighbors(self):
+    def find_nearest_apoptotic(self):
         """
-        Identify apoptotic neutrophils in the current location
-        and surrounding Moore neighborhood.
+        Find the nearest unengulfed apoptotic neutrophil
+        within the macrophage recruitment radius.
         """
 
-        # get the macrophage's current coordinates
         x, y = self.grid.get_location(self)
 
-        # get agents in the current location
-        current_agents = self.grid.get_agents_at(x, y)
+        recruitment_radius = self.params["macroRecruitmentRadius"]
 
-        # get agents in the eight surrounding locations
-        neighboring_agents = self.grid.get_neighborhood_agents(x, y)
+        nearest_apoptotic = None
+        shortest_distance = None
 
-        # combine both lists
-        nearby_agents = current_agents + neighboring_agents
+        apoptotic_neutrophils = self.grid.get_agents_by_type(
+            ApoptoticNeutrophil
+        )
 
-        # create a list to store apoptotic neutrophils
-        apoptotic_neighbors = []
+        for apoptotic_neutrophil in apoptotic_neutrophils:
 
-        # check each nearby agent
-        for agent in nearby_agents:
+            if apoptotic_neutrophil.is_engulfed():
+                continue
 
-            # check whether the agent is an apoptotic neutrophil
-            if isinstance(agent, ApoptoticNeutrophil):
+            apoptotic_x, apoptotic_y = self.grid.get_location(
+                apoptotic_neutrophil
+            )
 
-                # make sure it has not already been engulfed
-                if not agent.is_engulfed():
-                    apoptotic_neighbors.append(agent)
+            # calculate the distance in each direction
+            distance_x = abs(apoptotic_x - x)
+            distance_y = abs(apoptotic_y - y)
 
-        return apoptotic_neighbors
+            # account for periodic boundary conditions
+            distance_x = min(distance_x, self.grid.width - distance_x)
+            distance_y = min(distance_y, self.grid.height - distance_y)
+
+            # calculate the shortest distance to the apoptotic neutrophil
+            distance = math.sqrt(
+                distance_x ** 2 + distance_y ** 2
+)
+
+            if distance <= recruitment_radius:
+
+                if shortest_distance is None or distance < shortest_distance:
+
+                    shortest_distance = distance
+                    nearest_apoptotic = apoptotic_neutrophil
+
+        return nearest_apoptotic
 
 
     def die(self):
@@ -127,71 +130,8 @@ class Macrophage:
  
 
     #governs movement towards apoptotic neutrophils in neighborhood, if any are there
-    def move_toward_apoptotics(self):
-        x, y = self.grid.get_location(self)
- 
-        # Initialize list of current cell + 8 neighbours 
-        candidates = [(x, y)] + self.grid.moore_neighbour_points(x, y)
-        random.shuffle(candidates)  # remove bias when counts tie
- 
-        best_point, max_count = None, -1
-
-        #determine which grid sqaure has most neutrophils
-
-        for point in candidates:
-            count = 0
-            for obj in self.grid.objects_at(x, y): #need to add grid.objects_at() getter function
-                if isinstance(obj, ApoptoticNeutrophil):#isinstance(obj, Apoptotic) returns True if there is an apoptotic there, and False if not
-                    count += 1
-            if count > max_count:   
-                best_point, max_count = point, count
-
-        #if there are no apoptotic cells in neighborhood, cell will move chemotactically towards pro-inflam mediators, 
-        # else move towards space with most apoptotics
-        if max_count <= 0:
-            self.move_chemotactically()
-        elif best_point != (x, y):
-            self.grid.move_to(self, *best_point) #use of asterisk unpacks tuple best_point into separate args
- 
-    #Phagocytose apoptotic neutrophils
-
-    def phagocytose_apoptotic(self):
-        
-        x, y = self.grid.get_location(self)
-        #make list of apoptotic agents of current grid square
-        apoptotics = []
-        for obj in self.grid.objects_at(x, y):
-            if isinstance(obj, ApoptoticNeutrophil):
-                apoptotics.append(obj)
-        
-        if len(apoptotics) > 0:
-            target = random.choice(apoptotics)  #chooses random object from list, with equal weighted probabilities
-            if random.random() < self.params["prob_macroPhagoApop"]:
-                target.die()
-                self.release_anti_on = True
 
 
-    #Release of anti-inflammatory mediators
-    def release_anti(self):
-        if self.release_anti_on:
-            x, y = self.grid.get_location(self)
-            here = self.grid.environment_at(x, y)
-            if random.random() < self.params["prob_macroReleaseAnti"]:
-                here.increase_anti_concentration(self.params["inc_macroReleaseAnti"])
-
-    #Make decision of if agents will leave tissue/grid
-    def make_leave_decision(self):
-        x, y = self.grid.get_location(self)
-        local_pro = 0.0
-        for pt in self.grid.moore_neighbour_points(x, y):
-            env = self.grid.environment_at(*pt)
-            if env is not None:
-                local_pro += env.pro_concentration
- 
-        if local_pro < self.params["thresh_macroLeave"]:
-            if random.random() < self.params["prob_macroLeave"]:
-                self.die()
- 
     def find_apoptotic_at_current_location(self):
         """Identity apoptotic cells occupying the macrophages current coordinates"""
 
@@ -296,9 +236,10 @@ class Macrophage:
 
 
     def calculate_movement_probabilities(self):
-        """Determine movement probabilites based on apoptotic-cell attraction 
-         or inflammatory conditions
-         """
+        """
+        Determine movement probabilities based on the pro-inflammatory
+        concentration at neighboring locations.
+        """
 
         # get the macrophage's current coordinates
         x, y = self.grid.get_location(self)
@@ -309,10 +250,10 @@ class Macrophage:
         # get the eight neighboring locations
         neighboring_locations = self.grid.get_neighbors(x, y)
 
-        # create a list to store movement weights
-        movement_weights = []
+        # create a list to store movement exponents
+        movement_exponents = []
 
-        # calculate a weight for each neighboring location
+        # calculate an exponent for each neighboring location
         for neighbor_x, neighbor_y in neighboring_locations:
 
             # get the pro-inflammatory concentration at this location
@@ -321,18 +262,27 @@ class Macrophage:
             # calculate how much higher or lower the concentration is
             concentration_difference = neighbor_c - current_c
 
-            # assign a higher weight to locations with higher c
-            weight = np.exp(
-                self.params["m_k_grad"] * concentration_difference
-            )
+            # calculate the movement exponent
+            exponent = self.params["m_k_grad"] * concentration_difference
 
-            movement_weights.append(weight)
+            movement_exponents.append(exponent)
 
-        # convert movement weights into probabilities
+        # subtract the largest exponent to improve numerical stability
+        maximum_exponent = max(movement_exponents)
+
+        # convert the exponents into movement weights
+        movement_weights = [
+            np.exp(exponent - maximum_exponent)
+            for exponent in movement_exponents
+        ]
+
+        # calculate the total movement weight
         total_weight = sum(movement_weights)
 
+        # normalize the weights into probabilities
         movement_probabilities = [
-            weight / total_weight for weight in movement_weights
+            weight / total_weight
+            for weight in movement_weights
         ]
 
         return movement_probabilities
@@ -369,64 +319,71 @@ class Macrophage:
 
     def move(self):
         """
-        Move toward nearby apoptotic neutrophils.
-        If none are nearby, move chemotactically toward
-        higher concentrations of pro-inflammatory mediator c.
+        Move toward apoptotic neutrophils when they are
+        within the macrophage recruitment radius.
+
+        If no apoptotic neutrophils are detected,
+        move chemotactically toward higher concentrations
+        of pro-inflammatory mediator c.
         """
 
-        # identify apoptotic neutrophils in the neighborhood
-        apoptotic_neighbors = self.find_apoptotic_neighbors()
+        # find the nearest apoptotic neutrophil within
+        # the macrophage's recruitment radius
+        target = self.find_nearest_apoptotic()
 
-        # check whether any apoptotic neutrophils were found
-        if len(apoptotic_neighbors) == 0:
-
-            # move toward higher concentrations of c
+        # if no apoptotic neutrophil is nearby,
+        # follow the pro-inflammatory gradient
+        if target is None:
             self.move_chemotactically()
+            return
 
+        # get the macrophage's current location
+        macrophage_x, macrophage_y = self.grid.get_location(self)
+
+        # get the apoptotic neutrophil's location
+        target_x, target_y = self.grid.get_location(target)
+
+        # calculate the direct distance in each direction
+        difference_x = target_x - macrophage_x
+        difference_y = target_y - macrophage_y
+
+        # account for periodic boundaries in the x direction
+        if abs(difference_x) > self.grid.width / 2:
+
+            if difference_x > 0:
+                difference_x -= self.grid.width
+            else:
+                difference_x += self.grid.width
+
+        # account for periodic boundaries in the y direction
+        if abs(difference_y) > self.grid.height / 2:
+
+            if difference_y > 0:
+                difference_y -= self.grid.height
+            else:
+                difference_y += self.grid.height
+
+        # determine the direction of movement
+        if difference_x > 0:
+            movement_x = 1
+        elif difference_x < 0:
+            movement_x = -1
         else:
+            movement_x = 0
 
-            # get the macrophage's current coordinates
-            x, y = self.grid.get_location(self)
+        if difference_y > 0:
+            movement_y = 1
+        elif difference_y < 0:
+            movement_y = -1
+        else:
+            movement_y = 0
 
-            # get the eight neighboring locations
-            neighboring_locations = self.grid.get_neighbors(x, y)
+        # calculate the macrophage's next position
+        new_x = macrophage_x + movement_x
+        new_y = macrophage_y + movement_y
 
-            # include the current location
-            candidate_locations = [(x, y)] + neighboring_locations
-
-            # shuffle locations to avoid directional bias
-            random.shuffle(candidate_locations)
-
-            # find the location containing the most apoptotic neutrophils
-            best_location = None
-            highest_count = 0
-
-            for location in candidate_locations:
-
-                candidate_x, candidate_y = location
-
-                agents = self.grid.get_agents_at(candidate_x, candidate_y)
-
-                apoptotic_count = 0
-
-                for agent in agents:
-
-                    if isinstance(agent, ApoptoticNeutrophil):
-
-                        if not agent.is_engulfed():
-                            apoptotic_count += 1
-
-                if apoptotic_count > highest_count:
-
-                    highest_count = apoptotic_count
-                    best_location = location
-
-            # move toward the selected location
-            if best_location is not None and best_location != (x, y):
-
-                new_x, new_y = best_location
-
-                self.grid.move_agent(self, new_x, new_y)
+        # move the macrophage one grid cell toward the target
+        self.grid.move_agent(self, new_x, new_y)
 
     def check_departure(self):
         """
@@ -463,16 +420,6 @@ class Macrophage:
             # thresh_macroLeave: the concentration threshold below which the macrophage may leave
             # prob_macroLeave: the probability that it leaves when the concentration is below that threshold
 
-    def check_death(self):
-        """
-        Check whether the macrophage has reached the end of its lifespan.
-        """
-
-        # check whether the macrophage has expired
-        if self.lifespan <= 0:
-
-            # remove the macrophage
-            self.die()
 
     def update_lifespan(self):
         """
@@ -497,21 +444,28 @@ class Macrophage:
             return
 
         # move the macrophage the required number of times
+                # move the macrophage the required number of times
         for _ in range(self.params["movesPerTick_m"]):
+
+            # move toward an apoptotic neutrophil or follow the c gradient
             self.move()
 
-        # attempt to engulf an apoptotic neutrophil at its current location
-        self.phagocytose()
+            # attempt phagocytosis at the new location
+            self.phagocytose()
+
+            # stop if the macrophage is no longer alive
+            if not self.alive:
+                return
+
+        # stop if the macrophage has left the tissue
+        if not self.alive:
+            return
 
         # release anti-inflammatory mediator if the macrophage is activated
         self.release_mediator()
 
         # check whether the macrophage should leave the tissue
         self.check_departure()
-
-        # stop if the macrophage has left the tissue
-        if not self.alive:
-            return
 
         # decrease the macrophage's remaining lifespan
         self.update_lifespan()
