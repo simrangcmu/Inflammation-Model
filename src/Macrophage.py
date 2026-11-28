@@ -400,6 +400,10 @@ class Macrophage:
         # retrieve the macrophage's current location
         x, y = self.grid.get_location(self)
 
+        # Check whether an apoptotic neutrophil is already at this location
+        if len(self.find_apoptotic_at_current_location()) > 0:
+            return
+
         # retrieve the eight neighboring locations
         neighboring_locations = self.grid.get_neighbors(x, y)
 

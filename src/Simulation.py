@@ -8,7 +8,7 @@ from apoptotic_neutrophils import ApoptoticNeutrophil
 from macrophage import Macrophage
 
 
-class Simulation:
+class simulation:
 
     def __init__(
         self,
@@ -16,10 +16,14 @@ class Simulation:
         neutrophil_positions,
         macrophage_positions,
         neutrophil_params,
-        macrophage_params
+        macrophage_params, 
+        pnr = 0.02, 
+        pmr = 0.04
     ):
         # initialize simulation time
         self.time = 0
+        self.pnr = pnr
+        self.pmr = pmr
 
         # store the grid dimensions
         self.grid_size = grid_size
@@ -237,7 +241,7 @@ class Simulation:
                 if c > 0.05 and g < 0.015:
 
                     # recruit a neutrophil with the specified probability
-                    if random.random() < 0.02:
+                    if random.random() < self.pnr:
 
                         neutrophil = Neutrophil(
                             self.grid,
@@ -275,7 +279,7 @@ class Simulation:
                 if c > 0.4:
 
                     # recruit a macrophage with the specified probability
-                    if random.random() < 0.04:
+                    if random.random() < self.pmr:
 
                         macrophage = Macrophage(
                             self.grid,
@@ -340,7 +344,7 @@ if __name__ == "__main__":
     macrophage_positions = []
 
     # create the simulation
-    simulation = Simulation(
+    simulation = simulation(
         grid_size=100,
         neutrophil_positions=neutrophil_positions,
         macrophage_positions=macrophage_positions,
