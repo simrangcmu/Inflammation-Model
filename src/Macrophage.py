@@ -424,7 +424,7 @@ def move(self):
             dy += self.grid.height
 
         self.prev_move = (dx, dy)
-        self.grid.move_agent(self, (target_x, target_y))
+        self.grid.move_agent(self, target_x, target_y)
 
     # Otherwise, check whether pro-inflammatory mediators are present in neighboring locations
     else:
@@ -445,7 +445,7 @@ def move(self):
                 target_y - y
             )
 
-            self.grid.move_agent(self, (target_x, target_y))
+            self.grid.move_agent(self, target_x, target_y)
 
         # Otherwise, follow move chemotactically 
         else:
