@@ -390,96 +390,68 @@ class Macrophage:
 
         # update the macrophage's location
         self.grid.move_agent(self, new_x, new_y)
+     
+def move(self):
+    """
+    Move the macrophage toward apoptotic neutrophils or follow
+    the pro-inflammatory mediator gradient.
+    """
 
-    def move(self):
-        """
-        move the macrophage according to nearby apoptotic neutrophils
-        and pro-inflammatory mediator concentrations.
-        """
+    # Check whether an apoptotic neutrophil is already at macrophage's current location
+    # If so, stay in place so phagocytosis can occur
+    if self.find_apoptotic_at_current_location():
+        return
 
-        # retrieve the macrophage's current location
+    # Find neighboring locations containing apoptotic neutrophils
+    apoptotic_neighbors = self.find_apoptotic_neighbors()
+
+    # If apoptotic neutrophils are nearby, move toward one of them
+    if apoptotic_neighbors:
+        target_x, target_y = random.choice(apoptotic_neighbors)
+
+        dx = target_x - self.grid.get_location(self)[0]
+        dy = target_y - self.grid.get_location(self)[1]
+
+        # Account for wrapped boundaries
+        if dx > self.grid.width / 2:
+            dx -= self.grid.width
+        elif dx < -self.grid.width / 2:
+            dx += self.grid.width
+
+        if dy > self.grid.height / 2:
+            dy -= self.grid.height
+        elif dy < -self.grid.height / 2:
+            dy += self.grid.height
+
+        self.prev_move = (dx, dy)
+        self.grid.move_agent(self, (target_x, target_y))
+
+    # Otherwise, check whether pro-inflammatory mediators are present in neighboring locations
+    else:
         x, y = self.grid.get_location(self)
+        neighbors = self.grid.get_neighbors(x, y)
 
-        # Check whether an apoptotic neutrophil is already at this location
-        if len(self.find_apoptotic_at_current_location()) > 0:
-            return
-
-        # retrieve the eight neighboring locations
-        neighboring_locations = self.grid.get_neighbors(x, y)
-
-        # check for apoptotic neutrophils in neighboring locations
-        apoptotic_locations = self.find_apoptotic_neighbors()
-
-        # if apoptotic neutrophils are nearby, move toward one of them
-        if len(apoptotic_locations) > 0:
-
-            # randomly select a location containing apoptotic neutrophils
-            selected_location = random.choice(apoptotic_locations)
-
-            # retrieve the selected coordinates
-            new_x, new_y = selected_location
-
-            # calculate the movement direction
-            dx = new_x - x
-            dy = new_y - y
-
-            # correct for periodic boundaries
-            if dx > 1:
-                dx = -1
-            elif dx < -1:
-                dx = 1
-
-            if dy > 1:
-                dy = -1
-            elif dy < -1:
-                dy = 1
-
-            # remember the direction of movement
-            self.prev_move = DIRECTIONS.index((dx, dy))
-
-            # move to the selected location
-            self.grid.move_agent(self, new_x, new_y)
-
-            return
-
-        # check whether pro-inflammatory mediator is present nearby
-        total_neighborhood_c = sum(
+        total_c = sum(
             self.environment[0][neighbor_y, neighbor_x]
-            for neighbor_x, neighbor_y in neighboring_locations
+            for neighbor_x, neighbor_y in neighbors
         )
 
-        # if no pro-inflammatory mediator is present, move randomly
-        if total_neighborhood_c == 0:
+        # If no pro-inflammatory mediator is present, move randomly
+        if total_c == 0:
+            target_x, target_y = random.choice(neighbors)
 
-            # randomly select one neighboring location
-            new_x, new_y = random.choice(neighboring_locations)
+            self.prev_move = (
+                target_x - x,
+                target_y - y
+            )
 
-            # calculate the movement direction
-            dx = new_x - x
-            dy = new_y - y
+            self.grid.move_agent(self, (target_x, target_y))
 
-            # correct for periodic boundaries
-            if dx > 1:
-                dx = -1
-            elif dx < -1:
-                dx = 1
+        # Otherwise, follow move chemotactically 
+        else:
+            self.move_chemotactically()
 
-            if dy > 1:
-                dy = -1
-            elif dy < -1:
-                dy = 1
-
-            # remember the direction of movement
-            self.prev_move = DIRECTIONS.index((dx, dy))
-
-            # move to the selected location
-            self.grid.move_agent(self, new_x, new_y)
-
-            return
-
-        # otherwise, move chemotactically
-        self.move_chemotactically()
-
+ 
     def check_departure(self):
         """
         Check the local pro-inflammatory concentration and determine
