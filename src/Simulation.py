@@ -42,26 +42,36 @@ class Simulation:
         self.initialize_neutrophils(neutrophil_positions)
         self.initialize_macrophages(macrophage_positions)
 
-        self.dt = 0.01
+        # set the PDE parameters
+        self.dt = 0.1
+        self.pde_steps_per_tick = 10
 
-        self.diffusion_c = 0.1
-        self.diffusion_g = 0.1
+        self.diffusion_c = 1.5
+        self.diffusion_g = 1.5
 
-        self.decay_c = 0.01
-        self.decay_g = 0.01
+        self.decay_c = 0.002
+        self.decay_g = 0.002
+
+        self.inc_apoptoticReleasePro = 1
+
 
     def step(self):
-        """
-        Advance the simulation by one time step.
-        """
+        """Advance the simulation by one tick."""
 
-        # update all neutrophils
+        # recruit neutrophils every 2 ticks
+        if self.time % 2 == 0:
+            self.recruit_neutrophils()
+
+        # recruit macrophages every 5 ticks
+        if self.time % 5 == 0:
+            self.recruit_macrophages()
+
+        # update all agents
         self.update_neutrophils()
-
-        # update all macrophages
         self.update_macrophages()
+        self.update_apoptotic_neutrophils()
 
-        # update the chemical environment
+        # update the mediator fields
         self.update_environment()
 
         # advance simulation time
@@ -160,11 +170,9 @@ class Simulation:
     ]
 
     def update_macrophages(self):
-        """
-        Update the behavior of all macrophages.
-        """
+        """Update the behavior of all macrophages."""
 
-        # create a copy of the macrophage list
+        # create a copy of the current macrophage list
         current_macrophages = self.macrophages.copy()
 
         # update each macrophage
@@ -174,60 +182,162 @@ class Simulation:
             if macrophage.alive:
                 macrophage.update()
 
+        # remove macrophages that are no longer alive
+        self.macrophages = [
+            macrophage
+            for macrophage in self.macrophages
+            if macrophage.alive
+        ]
+
     def update_environment(self):
         """
-        Update the chemical fields using diffusion and decay.
+        Update the chemical fields using multiple PDE steps.
         """
 
-        updated_c, updated_g = update_fields(
-            self.environment[0],
-            self.environment[1],
-            self.dt,
-            self.diffusion_c,
-            self.diffusion_g,
-            self.decay_c,
-            self.decay_g
+        # perform multiple PDE updates during one ABM tick
+        for pde_step in range(self.pde_steps_per_tick):
+
+            updated_c, updated_g = update_fields(
+                self.environment[0],
+                self.environment[1],
+                self.dt,
+                self.diffusion_c,
+                self.diffusion_g,
+                self.decay_c,
+                self.decay_g
+            )
+
+            # update the existing arrays so all agents retain the correct references
+            self.environment[0][:] = updated_c
+            self.environment[1][:] = updated_g
+
+    
+    def recruit_neutrophils(self):
+        """Recruit neutrophils at eligible grid locations."""
+
+        # get the current active and apoptotic neutrophil populations
+        active_neutrophils = self.grid.get_agents_by_type(Neutrophil)
+        apoptotic_neutrophils = self.grid.get_agents_by_type(ApoptoticNeutrophil)
+
+        total_neutrophils = len(active_neutrophils) + len(apoptotic_neutrophils)
+
+        # check every location on the grid
+        for y in range(self.grid_size):
+            for x in range(self.grid_size):
+
+                # stop recruiting if the maximum population has been reached
+                if total_neutrophils >= 4000:
+                    return
+
+                # get the local mediator concentrations
+                c = self.environment[0][y, x]
+                g = self.environment[1][y, x]
+
+                # check whether this location is eligible for neutrophil recruitment
+                if c > 0.05 and g < 0.015:
+
+                    # recruit a neutrophil with the specified probability
+                    if random.random() < 0.02:
+
+                        neutrophil = Neutrophil(
+                            self.grid,
+                            self.environment,
+                            self.neutrophil_params
+                        )
+
+                        # place the new neutrophil at this grid location
+                        self.grid.add_agent(neutrophil, x, y)
+
+                        # keep track of the newly recruited neutrophil
+                        self.neutrophils.append(neutrophil)
+
+                        total_neutrophils += 1
+
+    def recruit_macrophages(self):
+        """Recruit macrophages at eligible grid locations."""
+
+        # get the current macrophage population
+        current_macrophages = self.grid.get_agents_by_type(Macrophage)
+        total_macrophages = len(current_macrophages)
+
+        # check every location on the grid
+        for y in range(self.grid_size):
+            for x in range(self.grid_size):
+
+                # stop recruiting if the maximum population has been reached
+                if total_macrophages >= 1000:
+                    return
+
+                # get the local pro-inflammatory concentration
+                c = self.environment[0][y, x]
+
+                # check whether this location is eligible for macrophage recruitment
+                if c > 0.4:
+
+                    # recruit a macrophage with the specified probability
+                    if random.random() < 0.04:
+
+                        macrophage = Macrophage(
+                            self.grid,
+                            self.environment,
+                            self.macrophage_params
+                        )
+
+                        # place the new macrophage at this grid location
+                        self.grid.add_agent(macrophage, x, y)
+
+                        # keep track of the newly recruited macrophage
+                        self.macrophages.append(macrophage)
+
+                        total_macrophages += 1
+
+    def update_apoptotic_neutrophils(self):
+        """Update the behavior of all apoptotic neutrophils."""
+
+        # get the current apoptotic neutrophils on the grid
+        current_apoptotic_neutrophils = self.grid.get_agents_by_type(
+            ApoptoticNeutrophil
         )
 
-        # update the existing arrays so all agents retain the correct references
-        self.environment[0][:] = updated_c
-        self.environment[1][:] = updated_g
+        # update each apoptotic neutrophil
+        for apoptotic_neutrophil in current_apoptotic_neutrophils:
 
+            # update the cell if it is still on the grid
+            if apoptotic_neutrophil in self.grid.get_all_agents():
+
+                apoptotic_neutrophil.update(
+                    self.grid,
+                    self.environment[0],
+                    self.inc_apoptoticReleasePro
+        )
+                
 if __name__ == "__main__":
 
     # define temporary neutrophil parameters
     neutrophil_params = {
         "movesPerTick_n": 2,
-        "n_k_grad": 0.5,
+        "n_k_grad": 80,
         "n_sigma": 1.0,
         "prob_neutroReleasePro": 0.5,
-        "inc_neutroReleasePro": 0.1
+        "inc_neutroReleasePro": 0.001
     }
 
     # define temporary macrophage parameters
     macrophage_params = {
-        "movesPerTick_m": 2,
+        "movesPerTick_m": 1,
         "prob_macroPhagoApop": 1.0,
-        "threshold_macroActivation": 2,
-        "prob_macroReleaseAnti": 1.0,
-        "inc_macroReleaseAnti": 0.5,
-        "m_k_grad": 0.5,
-        "thresh_macroLeave": 0.5,
-        "prob_macroLeave": 0.0
+        "prob_macroReleaseAnti": 0.8,
+        "inc_macroReleaseAnti": 0.001,  
+        "m_k_grad": 80,
+        "m_sigma": 1.0,
+        "prob_macroLeave": 0.8,
+        "thresh_macroLeave": 0.02
     }
 
     # define initial agent positions
-    neutrophil_positions = [
-        (45, 45),
-        (48, 50),
-        (55, 52),
-        (52, 46)
-    ]
-
-    macrophage_positions = [
-        (40, 40),
-        (60, 60)
-    ]
+    # begin the simulation without any agents
+    neutrophil_positions = []
+    macrophage_positions = []
 
     # create the simulation
     simulation = Simulation(
@@ -243,7 +353,7 @@ if __name__ == "__main__":
     print("Active neutrophils:", len(simulation.neutrophils))
     print("Macrophages:", len(simulation.macrophages))
 
-    # run the simulation for 100 time steps
+    # run the simulation for time steps
     print("\nRUNNING SIMULATION")
 
     simulation.run(1500)

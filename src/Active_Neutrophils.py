@@ -19,12 +19,11 @@ DIRECTIONS = [
 # neutrophil-specific parameters
 NEUTROPHIL_PARAMS = {
     "movesPerTick_n": 2,
-    "n_k_grad": 0.5,
+    "n_k_grad": 80,
     "n_sigma": 1.0,
     "prob_neutroReleasePro": 0.5,
-    "inc_neutroReleasePro": 0.1,
+    "inc_neutroReleasePro": 0.001,
 }
-
 
 class Neutrophil:
 
@@ -87,20 +86,39 @@ class Neutrophil:
             # calculate the difference in concentration
             difference = neighbor_c - current_c
 
-            # calculate the gradient weight
-            weight = np.exp(
-                self.params["n_k_grad"] * difference
+            # calculate the concentration differences for all neighbors
+            concentration_differences = []
+
+            for neighbor in neighbors:
+
+                # retrieve the neighboring coordinates
+                neighbor_x, neighbor_y = neighbor
+
+                # retrieve the neighboring concentration
+                neighbor_c = self.environment[0][neighbor_y, neighbor_x]
+
+                # calculate the concentration difference
+                difference = neighbor_c - current_c
+
+                concentration_differences.append(difference)
+
+            # convert the differences into a numpy array
+            concentration_differences = np.array(concentration_differences)
+
+            # subtract the largest difference to prevent numerical overflow
+            adjusted_differences = (
+                concentration_differences - np.max(concentration_differences)
             )
 
-            gradient_weights.append(weight)
+            # calculate the gradient weights
+            gradient_weights = np.exp(
+                self.params["n_k_grad"] * adjusted_differences
+            )
 
-        # convert the weights into a numpy array
-        gradient_weights = np.array(gradient_weights)
-
-        # normalize the weights to obtain probabilities
-        gradient_probabilities = (
-            gradient_weights / np.sum(gradient_weights)
-        )
+            # normalize the weights to obtain probabilities
+            gradient_probabilities = (
+                gradient_weights / np.sum(gradient_weights)
+            )
 
         return neighbors, gradient_probabilities
     

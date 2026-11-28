@@ -97,8 +97,8 @@ def get_anti_inflammatory(g, x, y):
     """
 
     # apply periodic boundary conditions to the coordinates
-    x = x % GRID_SIZE
-    y = y % GRID_SIZE
+    x = x % g.shape[1]
+    y = y % g.shape[0]
 
     # retrieve the local anti-inflammatory concentration
     return g[y, x]
@@ -138,8 +138,9 @@ def add_anti_inflammatory(g, x, y, amount):
     """
 
     # apply periodic boundary conditions
-    x = x % GRID_SIZE
-    y = y % GRID_SIZE
+    x = x % g.shape[1]
+    y = y % g.shape[0]
+
 
     # add the specified amount to the local concentration
     g[y, x] += amount
@@ -317,8 +318,8 @@ def get_neighborhood_concentration(field, x, y):
                 continue
 
             # calculate the neighboring coordinates
-            neighbor_x = (x + dx) % GRID_SIZE
-            neighbor_y = (y + dy) % GRID_SIZE
+            neighbor_x = (x + dx) % field.shape[1]
+            neighbor_y = (y + dy) % field.shape[0]
 
             # retrieve the chemical concentration at this location
             concentration = field[neighbor_y, neighbor_x]

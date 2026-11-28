@@ -147,35 +147,38 @@ class Grid:
         these eight locations form the moore neighborhood.
         """
 
+        # define the eight neighboring directions in a consistent order
+        directions = [
+            (1, 0),
+            (1, 1),
+            (0, 1),
+            (-1, 1),
+            (-1, 0),
+            (-1, -1),
+            (0, -1),
+            (1, -1)
+        ]
+
         # create an empty list to store the neighboring coordinates
         neighbors = []
 
-        # examine the positions immediately surrounding the current location
-        # dx represents the change in the x-coordinate
-        # dy represents the change in the y-coordinate
-        for dx in [-1, 0, 1]:
-            for dy in [-1, 0, 1]:
+        # examine each of the eight directions
+        for dx, dy in directions:
 
-                # skip the current location because it is not its own neighbor
-                if dx == 0 and dy == 0:
-                    continue
+            # calculate the coordinates of the neighboring location
+            neighbor_x = x + dx
+            neighbor_y = y + dy
 
-                # calculate the coordinates of the neighboring location
-                neighbor_x = x + dx
-                neighbor_y = y + dy
+            # apply periodic boundary conditions
+            neighbor_x, neighbor_y = self.wrap_coordinates(
+                neighbor_x, neighbor_y
+            )
 
-                # apply periodic boundary conditions
-                # this allows neighbors to wrap around the edges of the grid
-                neighbor_x, neighbor_y = self.wrap_coordinates(
-                    neighbor_x, neighbor_y
-                )
-
-                # add the neighboring coordinates to the list
-                neighbors.append((neighbor_x, neighbor_y))
+            # add the neighboring coordinates to the list
+            neighbors.append((neighbor_x, neighbor_y))
 
         # return the list containing all eight neighboring locations
         return neighbors
-
 
     def get_neighborhood_agents(self, x, y):
         """
